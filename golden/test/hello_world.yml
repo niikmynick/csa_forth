@@ -1,0 +1,7 @@
+in_source: |-
+  ." Hello World!"
+in_stdin: |-
+out_code: |-
+out_stdout: |-
+  Hello, World!
+out_log: |-

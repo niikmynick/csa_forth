@@ -1,0 +1,9 @@
+in_source: |-
+  : cat  begin key dup emit 13 = until ;
+  cat
+in_stdin: |-
+  This is a way
+out_bin: |-
+out_stdout: |-
+  This is a way
+out_log: |-
