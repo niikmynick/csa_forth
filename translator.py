@@ -2,9 +2,9 @@ import sys
 import json
 
 terms_to_instructions: dict[str: list[str]] = {
-    "=": ["comp", "push 0", "comp"],
-    "<": ["comp", "push -1", "comp"],
-    ">": ["comp", "push 1", "comp"],
+    "=": ["eql"],
+    "<": ["less"],
+    ">": ["lrg"],
     "dup": ["dup"],
     "drop": ["pop"],
     "swap": ["swap"],
@@ -16,8 +16,8 @@ terms_to_instructions: dict[str: list[str]] = {
     "key": ["read INPUT"],
     "!": ["save"],
     "@": ["read"],
-    "?": ["read", "save OUTPUT"],
-    ".": ["save out_temp", "jump system_number_print"],
+    "?": ["read", "save out_temp", "push 0", "jmp system_number_prepare", "jmp system_number_print"],
+    ".": ["save out_temp", "jmp system_number_prepare", "jmp system_number_print"],
     "emit": ["save OUTPUT"],
     "cr": ["push 13", "save OUTPUT"],
 }
@@ -30,10 +30,11 @@ def terms_to_assembly(terms: list[str]) -> tuple[dict[str: int], list[str], dict
     loops: list[str] = []  # list of names
     code: list[str] = []  # list of instructions
     labels_code: dict[str: list[str]] = {
-        "system_number_print": ["system_number_print:", "push out_temp", "read", "push 10", "push out_temp", "read",
-                         "push 10", "div", "mul", "sub",
-                         "push 48", "add", "swap", "push 10", "div", "dup", "save out_temp",
-                         "dup", "inc", "push 1", "comp", "push 0", "comp", "jnz system_number_print", "ret"],
+        "system_number_prepare": ["system_number_prepare:", "read out_temp", "dup", "push 10", "read out_temp",
+                                  "push 10", "div", "mul", "sub",
+                                  "push 48", "add", "swap", "push 10", "div", "dup", "save out_temp",
+                                  "push 0", "eql", "jmz system_number_prepare", "ret"],
+        "system_number_print": ["system_number_print:", "dup", "save OUTPUT", "jnz system_number_print", "ret"],
     }  # name: list of instructions
 
     i: int = 0
@@ -201,9 +202,9 @@ def terms_to_assembly(terms: list[str]) -> tuple[dict[str: int], list[str], dict
             labels_code[label_name] = [f"{label_name}:"]
 
             if in_function:
-                labels_code[procedures[-1]].append(f"jmp {label_name}")
+                labels_code[procedures[-1]].extend(["save i", "save end", f"jmp {label_name}"])
             else:
-                code.append(f"jmp {label_name}")
+                code.extend(["save i", "save end", f"jmp {label_name}"])
 
             i += 1
 
@@ -212,8 +213,8 @@ def terms_to_assembly(terms: list[str]) -> tuple[dict[str: int], list[str], dict
 
             in_loop = False
 
-            labels_code[loops[-1]].extend(["push i", "read", "push 1", "add", "push end", "read", "comp",
-                                           "push -1", "comp", f"jmz {loops[-1]}", "ret"])
+            labels_code[loops[-1]].extend(["push i", "read", "inc", "dup", "save i",
+                                           "push end", "read", "less", f"jnz {loops[-1]}", "ret"])
 
             i += 1
 
@@ -261,13 +262,13 @@ def terms_to_assembly(terms: list[str]) -> tuple[dict[str: int], list[str], dict
 
         elif i + 1 < len(terms) and terms[i + 1] == "cells":
             if in_condition:
-                labels_code[conditions[-1]].append(f"push {terms[i]}")
+                labels_code[conditions[-1]].append(f"read {terms[i]}")
             elif in_loop:
-                labels_code[loops[-1]].append(f"push {terms[i]}")
+                labels_code[loops[-1]].append(f"read {terms[i]}")
             elif in_function:
-                labels_code[procedures[-1]].append(f"push {terms[i]}")
+                labels_code[procedures[-1]].append(f"read {terms[i]}")
             else:
-                code.append(f"push {terms[i]}")
+                code.append(f"read {terms[i]}")
 
             i += 2
 
@@ -320,7 +321,6 @@ def asm_to_machine(variables: dict[str: int],
     idx = 0
 
     for instruction in instructions:
-        print(idx, instruction)
         parts = instruction.split()
         if len(parts) == 2:
             if parts[1] in labels_to_idx.keys():
@@ -349,13 +349,8 @@ def asm_to_machine(variables: dict[str: int],
 
         idx += 1
 
-    print(labels_to_idx)
-
     for name, lines in labels.items():
-        print()
-        print(lines[0])
         for line in lines[1:]:
-            print(idx, line)
             parts = line.split()
             if len(parts) == 2:
                 if parts[1] in labels_to_idx.keys():
@@ -401,11 +396,6 @@ def translate(source_path: str, dest_path: str) -> None:
 
     variables, instructions, procedures = terms_to_assembly(term_lst)
 
-    json_dict = asm_to_machine(variables, instructions, procedures)
-
-    with open(dest_path, "w") as out_file:
-        json.dump(json_dict, out_file, indent = 4)
-
     # with open(dest_path, "w") as out_file:
     #     out_file.write(".data\n")
     #     for name, size in variables.items():
@@ -419,9 +409,14 @@ def translate(source_path: str, dest_path: str) -> None:
     #         for line in procedure:
     #             out_file.write(f"{line}\n")
 
+    json_dict = asm_to_machine(variables, instructions, procedures)
+
+    with open(dest_path, "w") as out_file:
+        json.dump(json_dict, out_file, indent=4)
+
 
 if __name__ == "__main__":
-    assert len(sys.argv) == 3, "Usage: python translator.py <source> <target>"
-    translate(sys.argv[1], sys.argv[2])
+    # assert len(sys.argv) == 3, "Usage: python translator.py <source> <target>"
+    # translate(sys.argv[1], sys.argv[2])
 
-    # translate("golden/src/prob2.4th", "dest.json")
+    translate("golden/src/prob2.4th", "dest.json")
