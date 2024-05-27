@@ -8,6 +8,6 @@ variable username
 ." What is your name?"
 cr
 save_username
-." Hello, "
+." Hello,"
 print_username
 ." !"
