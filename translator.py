@@ -13,6 +13,7 @@ terms_to_instructions: dict[str: list[str]] = {
     "*": ["mul"],
     "/": ["div"],
     "mod": ["mod"],
+    "not": ["not"],
     "key": ["read INPUT"],
     "!": ["save"],
     "@": ["read"],
@@ -272,7 +273,7 @@ def terms_to_assembly(terms: list[str]) -> tuple[dict[str: int], list[str], dict
 
             i += 2
 
-        elif terms[i] in variables or terms[i].isnumeric():
+        elif terms[i] in variables or terms[i].isnumeric() or (terms[i][0] == "-" and terms[i][1:].isnumeric()):
             if in_condition:
                 labels_code[conditions[-1]].append(f"push {terms[i]}")
             elif in_loop:
@@ -419,4 +420,4 @@ if __name__ == "__main__":
     # assert len(sys.argv) == 3, "Usage: python translator.py <source> <target>"
     # translate(sys.argv[1], sys.argv[2])
 
-    translate("golden/src/prob2.4th", "dest.json")
+    translate("golden/src/cat.4th", "dest.json")
