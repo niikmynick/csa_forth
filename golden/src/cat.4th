@@ -1,2 +1,2 @@
-: cat  begin key dup emit 13 = until ;
+: cat  begin key dup emit 0 = not until ;
 cat
