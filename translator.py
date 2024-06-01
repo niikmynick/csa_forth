@@ -1,7 +1,7 @@
 import sys
 import json
 
-terms_to_instructions: dict[str: list[str]] = {
+terms_to_instructions: dict[str, list[str]] = {
     "=": ["eql"],
     "<": ["less"],
     ">": ["lrg"],
@@ -24,13 +24,13 @@ terms_to_instructions: dict[str: list[str]] = {
 }
 
 
-def terms_to_assembly(terms: list[str]) -> tuple[dict[str: int], list[str], dict[str: list[str]]]:
-    variables: dict[str: int] = {}  # name: size
+def terms_to_assembly(terms: list[str]) -> tuple[dict[str, int], list[str], dict[str, list[str]]]:
+    variables: dict[str, int] = {}  # name: size
     procedures: list[str] = []  # list of names
     conditions: list[str] = []  # list of names
     loops: list[str] = []  # list of names
     code: list[str] = []  # list of instructions
-    labels_code: dict[str: list[str]] = {
+    labels_code: dict[str, list[str]] = {
         "system_number_prepare": ["system_number_prepare:", "read out_temp", "dup", "push 10", "read out_temp",
                                   "push 10", "div", "mul", "sub",
                                   "push 48", "add", "swap", "push 10", "div", "dup", "save out_temp",
@@ -60,14 +60,15 @@ def terms_to_assembly(terms: list[str]) -> tuple[dict[str: int], list[str], dict
                 else:
                     code.extend([f"push {ord(char)}", "save OUTPUT"])
 
-            if in_condition:
-                labels_code[conditions[-1]].extend(["push 32", "save OUTPUT"])
-            elif in_loop:
-                labels_code[loops[-1]].extend(["push 32", "save OUTPUT"])
-            elif in_function:
-                labels_code[procedures[-1]].extend(["push 32", "save OUTPUT"])
             else:
-                code.extend(["push 32", "save OUTPUT"])
+                if in_condition:
+                    labels_code[conditions[-1]].extend(["push 32", "save OUTPUT"])
+                elif in_loop:
+                    labels_code[loops[-1]].extend(["push 32", "save OUTPUT"])
+                elif in_function:
+                    labels_code[procedures[-1]].extend(["push 32", "save OUTPUT"])
+                else:
+                    code.extend(["push 32", "save OUTPUT"])
 
             i += 1
 
@@ -292,11 +293,11 @@ def terms_to_assembly(terms: list[str]) -> tuple[dict[str: int], list[str], dict
     return variables, code, labels_code
 
 
-def asm_to_machine(variables: dict[str: int],
+def asm_to_machine(variables: dict[str, int],
                    instructions: list[str],
-                   labels: dict[str: list[str]]) -> dict[str: list[dict[str | int: str | int]]]:
-    variables_to_idx: dict[str: int] = {"INPUT": 0, "OUTPUT": 1, "out_temp": 2, "i": 3, "end": 4}
-    processed_variables: list[dict[str | int: str | int]] = [
+                   labels: dict[str, list[str]]) -> dict[str, list[dict[str | int, str | int]]]:
+    variables_to_idx: dict[str, int] = {"INPUT": 0, "OUTPUT": 1, "out_temp": 2, "i": 3, "end": 4}
+    processed_variables: list[dict[str | int, str | int]] = [
         {"idx": 0, "size": 1}, {"idx": 1, "size": 1},
         {"idx": 2, "size": 1}, {"idx": 3, "size": 1}, {"idx": 4, "size": 1}
     ]
@@ -311,9 +312,9 @@ def asm_to_machine(variables: dict[str: int],
         cell += size
 
     idx = len(instructions)
-    labels_to_idx: dict[str: int] = {}
-    processed_code: list[dict[str | int: str | int]] = []
-    processed_labels: list[dict[str | int: str | int]] = []
+    labels_to_idx: dict[str, int] = {}
+    processed_code: list[dict[str | int, str | int]] = []
+    processed_labels: list[dict[str | int, str | int]] = []
 
     for name, lines in labels.items():
         labels_to_idx[name] = idx
@@ -412,12 +413,12 @@ def translate(source_path: str, dest_path: str) -> None:
 
     json_dict = asm_to_machine(variables, instructions, procedures)
 
-    with open(dest_path, "w") as out_file:
-        json.dump(json_dict, out_file, indent=4)
+    with open(dest_path, "w", encoding="utf-8") as out_file:
+        json.dump(json_dict, out_file, indent=2)
 
 
 if __name__ == "__main__":
     # assert len(sys.argv) == 3, "Usage: python translator.py <source> <target>"
     # translate(sys.argv[1], sys.argv[2])
 
-    translate("golden/src/cat.4th", "dest.json")
+    translate("golden/src/prob2.4th", "dest.o")

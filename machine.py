@@ -169,7 +169,6 @@ class DataPath:
             case DataMemorySignal.WRITE:
                 assert self.data_memory.address_register != 0, "can't write to input device"
                 if self.data_memory.address_register == 1:
-                    logging.info(f"Writing {self.dm_mux.get()}, {chr(self.dm_mux.get())}")
                     self.output_buffer.append(self.dm_mux.get())
                 else:
                     self.data_memory.write(self.dm_mux.get())
@@ -315,6 +314,7 @@ class ControlUnit:
         self.data_path = data_path
 
         self.instruction_counter: int = 0
+        self.mcode_counter: int = 0
         self.ticks = 0
 
         self.no_operand_mcode = {
@@ -353,22 +353,23 @@ class ControlUnit:
     def handle_command(self):
         logging.debug(f"Fetching instruction id = {self.data_path.instruction_pointer}")
         for mc in self.no_operand_mcode["fetch"]:
+            logging.debug(f"Processing mcode instruction {mc}")
             self.data_path.handle_signal[type(mc)](mc)
 
         logging.debug(f"Instruction n = {self.instruction_counter}: {self.data_path.instruction_register}")
 
         if self.data_path.operand_flag:
-            logging.debug(f"Instruction with one operand {self.data_path.alu.result}")
+            logging.debug(f"Has operand {self.data_path.alu.result}")
             for mc in self.one_operand_mcode[self.data_path.instruction_register]:
-                logging.debug(f"MC {mc}")
+                logging.debug(f"Processing mcode instruction {mc}")
                 self.data_path.handle_signal[type(mc)](mc)
-                logging.debug(f"DS: {self.data_path.data_stack} RS: {self.data_path.return_stack} ALU: res = {self.data_path.alu.result}, a = {self.data_path.alu.a}, b = {self.data_path.alu.b}")
+                logging.debug(f"DS: {self.data_path.data_stack} RS: {self.data_path.return_stack} OutBuffer: {self.data_path.output_buffer} ALU: res = {self.data_path.alu.result}, a = {self.data_path.alu.a}, b = {self.data_path.alu.b}")
         else:
-            logging.debug("Instruction with no operand")
+            logging.debug("Has no operand")
             for mc in self.no_operand_mcode[self.data_path.instruction_register]:
-                logging.debug(f"MC: {mc}")
+                logging.debug(f"Processing mcode instruction {mc}")
                 self.data_path.handle_signal[type(mc)](mc)
-                logging.debug(f"DS: {self.data_path.data_stack} RS: {self.data_path.return_stack} ALU: res = {self.data_path.alu.result}, a = {self.data_path.alu.a}, b = {self.data_path.alu.b}")
+                logging.debug(f"DS: {self.data_path.data_stack} RS: {self.data_path.return_stack} OutBuffer: {self.data_path.output_buffer} ALU: res = {self.data_path.alu.result}, a = {self.data_path.alu.a}, b = {self.data_path.alu.b}")
 
 
 def simulate(source_path: str, input_path: str, result_path: str):
@@ -391,15 +392,11 @@ def simulate(source_path: str, input_path: str, result_path: str):
         data_path.instruction_memory.address_register = instruction["idx"]
         data_path.instruction_memory.write(instruction)
 
-    logging.debug(data_path.data_memory)
-    logging.debug(data_path.instruction_memory)
-
     while data_path.exit_flag != 1:
         control_unit.handle_command()
         control_unit.instruction_counter += 1
 
-    logging.info(f"System time: {control_unit.ticks}, instructions: {control_unit.instruction_counter}")
-    logging.debug(data_path.output_buffer)
+    logging.info(f"System time: {control_unit.ticks}, instructions: {control_unit.instruction_counter}, mcode instructions: {control_unit.mcode_counter}, output buffer: {data_path.output_buffer}")
 
     with open(result_path, "w") as result_file:
         for c in data_path.output_buffer:
@@ -410,5 +407,5 @@ def simulate(source_path: str, input_path: str, result_path: str):
 if __name__ == "__main__":
     # assert len(sys.argv) == 3, "Usage: python machine.py <source> <input> <target>"
     # simulate(sys.argv[1], sys.argv[2], sys.argv[3])
-    logging.basicConfig(level=logging.DEBUG)
-    simulate("dest.json", "input.txt", "result.txt")
+    logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()], encoding="utf-8")
+    simulate("dest.o", "input.txt", "result.txt")
