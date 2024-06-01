@@ -68,6 +68,18 @@ class ALU:
         self.zero = self.result == 0
         self.negative = self.result < 0
 
+    def not_a(self):
+        self.result = int(not self.a)
+
+        self.zero = self.result == 0
+        self.negative = self.result < 0
+
+    def not_b(self):
+        self.result = int(not self.b)
+
+        self.zero = self.result == 0
+        self.negative = self.result < 0
+
     def __str__(self):
         return f'ALU: result={self.result}, zero={self.zero}, negative={self.negative}'
 
