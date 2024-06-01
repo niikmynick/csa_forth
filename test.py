@@ -35,6 +35,4 @@ def test_translator_asm_and_machine(golden, caplog):
 
         assert code == golden["out_code"]
         assert out_text == golden["out_stdout"]
-        with open("machine.log", "w", encoding="utf-8") as file:
-            file.write(caplog.text)
         assert caplog.text == golden["out_log"]

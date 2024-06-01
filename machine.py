@@ -314,7 +314,6 @@ class ControlUnit:
         self.data_path = data_path
 
         self.instruction_counter: int = 0
-        self.mcode_counter: int = 0
         self.ticks = 0
 
         self.no_operand_mcode = {
@@ -350,11 +349,15 @@ class ControlUnit:
             "jnz": [IpMuxSignal.ALU, JumpSignal.JNZ, DataStackSignal.POP],
         }
 
+    def tick(self):
+        self.ticks += 1
+
     def handle_command(self):
         logging.debug(f"Fetching instruction id = {self.data_path.instruction_pointer}")
         for mc in self.no_operand_mcode["fetch"]:
             logging.debug(f"Processing mcode instruction {mc}")
             self.data_path.handle_signal[type(mc)](mc)
+            self.tick()
 
         logging.debug(f"Instruction n = {self.instruction_counter}: {self.data_path.instruction_register}")
 
@@ -363,12 +366,14 @@ class ControlUnit:
             for mc in self.one_operand_mcode[self.data_path.instruction_register]:
                 logging.debug(f"Processing mcode instruction {mc}")
                 self.data_path.handle_signal[type(mc)](mc)
+                self.tick()
                 logging.debug(f"DS: {self.data_path.data_stack} RS: {self.data_path.return_stack} OutBuffer: {self.data_path.output_buffer} ALU: res = {self.data_path.alu.result}, a = {self.data_path.alu.a}, b = {self.data_path.alu.b}")
         else:
             logging.debug("Has no operand")
             for mc in self.no_operand_mcode[self.data_path.instruction_register]:
                 logging.debug(f"Processing mcode instruction {mc}")
                 self.data_path.handle_signal[type(mc)](mc)
+                self.tick()
                 logging.debug(f"DS: {self.data_path.data_stack} RS: {self.data_path.return_stack} OutBuffer: {self.data_path.output_buffer} ALU: res = {self.data_path.alu.result}, a = {self.data_path.alu.a}, b = {self.data_path.alu.b}")
 
 
@@ -396,7 +401,7 @@ def simulate(source_path: str, input_path: str, result_path: str):
         control_unit.handle_command()
         control_unit.instruction_counter += 1
 
-    logging.info(f"System time: {control_unit.ticks}, instructions: {control_unit.instruction_counter}, mcode instructions: {control_unit.mcode_counter}, output buffer: {data_path.output_buffer}")
+    logging.info(f"System time: {control_unit.ticks}, instructions: {control_unit.instruction_counter}, output buffer: {data_path.output_buffer}")
 
     with open(result_path, "w") as result_file:
         for c in data_path.output_buffer:
