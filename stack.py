@@ -1,6 +1,7 @@
 class Stack:
     def __init__(self):
         self.items: list = []
+        self.TOS = None
 
     def is_empty(self) -> bool:
         return self.items == []
